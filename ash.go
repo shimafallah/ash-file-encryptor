@@ -3,7 +3,9 @@ package main
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/md5"
 	"crypto/rand"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"io"
@@ -21,16 +23,25 @@ func fileExists(fileName string) bool {
 	return !info.IsDir()
 }
 
+func ConvertTo32(Password string) string {
+	PasswordLength := len(Password)
+	MD5Hasher := md5.New()
+	MD5Hasher.Write([]byte(Password))
+	PasswordMD5 := hex.EncodeToString(MD5Hasher.Sum(nil))
+	PasswordLength = 32 - PasswordLength
+	Password = Password + PasswordMD5[0:PasswordLength]
+	return Password
+}
 func Encrypt(fileName string, Password string) {
 
 	File, err := ioutil.ReadFile(fileName)
-	Data := []byte("(" + fileName + ")" + string(File))
-	PasswordLength := len(Password)
-	SplitText := "x"
-	PasswordLength = 32 - PasswordLength
-	for i := 1; i <= PasswordLength; i++ {
-		Password += SplitText
+	if err != nil {
+		fmt.Println(err)
 	}
+	Data := []byte("(" + fileName + ")" + string(File))
+
+	// Ciper Needs 32 Byte Password
+	Password = ConvertTo32(Password)
 	key := []byte(Password)
 
 	c, err := aes.NewCipher(key)
@@ -54,21 +65,16 @@ func Encrypt(fileName string, Password string) {
 
 		fmt.Println(err)
 	}
-	os.Remove(fileName)
+	os.Remove(fileName) // Remove Original File
 	fmt.Println("File Encrypted as " + RegexMatch + ".ash !")
 }
 
 func Decrypt(filename string, Password string) {
-
-	PasswordLength := len(Password)
-	SplitText := "x"
-	PasswordLength = 32 - PasswordLength
-	for i := 1; i <= PasswordLength; i++ {
-		Password += SplitText
-	}
+	// TODO : .ash extenstion is not necessary
+	Password = ConvertTo32(Password)
 	key := []byte(Password)
-	ciphertext, err := ioutil.ReadFile(filename)
 
+	ciphertext, err := ioutil.ReadFile(filename)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -106,9 +112,6 @@ func Decrypt(filename string, Password string) {
 	fmt.Println("File Decrypted Successfully !")
 }
 func main() {
-	// Shima -e -f test.png -p 1234
-	// Shima -d -f test.png -p 1234
-
 	encrypt := flag.Bool("e", false, "encrypt")
 	decrypt := flag.Bool("d", false, "decrypt")
 	fileName := flag.String("f", "", "fileName")
@@ -125,8 +128,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	if len(*password) >= 32 {
-		fmt.Println("Password Can't Be Empty , Please Use -p to enter Password")
+	if len(*password) > 32 {
+		fmt.Println("Password Can't be more than 32 characters")
 		os.Exit(1)
 	}
 
