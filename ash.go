@@ -59,13 +59,13 @@ func Encrypt(fileName string, Password string) {
 
 	re := regexp.MustCompile(`(?m)(.*)\.`)
 	RegexMatch := re.FindStringSubmatch(fileName)[1]
-
+	
+	os.Remove(fileName) // Remove Original File
 	err = ioutil.WriteFile(RegexMatch+".ash", gcm.Seal(nonce, nonce, Data, nil), 0777)
 	if err != nil {
 
 		fmt.Println(err)
 	}
-	os.Remove(fileName) // Remove Original File
 	fmt.Println("File Encrypted as " + RegexMatch + ".ash !")
 }
 
